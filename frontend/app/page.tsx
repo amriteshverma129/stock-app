@@ -44,27 +44,89 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
-      <div className="container mx-auto py-8 px-4">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900 dark:text-white mb-2">
-            📊 Stock Market Data Science Dashboard
-          </h1>
-          <p className="text-slate-600 dark:text-slate-400">
-            AI-powered stock analysis with machine learning predictions
-          </p>
+    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30 dark:from-slate-950 dark:via-blue-950/30 dark:to-purple-950/30">
+      <div className="container mx-auto py-8 px-4 max-w-[1600px]">
+        {/* Enhanced Header */}
+        <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-8 shadow-2xl">
+          <div className="absolute inset-0 bg-grid-white/10"></div>
+          <div className="relative z-10">
+            <div className="flex items-center gap-4 mb-3">
+              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div>
+                <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2">
+                  Stock Market Intelligence
+                </h1>
+                <p className="text-blue-100 text-lg">
+                  AI-powered analysis • Real-time predictions • Multi-timeframe insights
+                </p>
+              </div>
+            </div>
+            
+            {/* Quick stats banner */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                <div className="text-blue-100 text-xs font-medium mb-1">Total Stocks</div>
+                <div className="text-2xl font-bold text-white">40+</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                <div className="text-blue-100 text-xs font-medium mb-1">ML Models</div>
+                <div className="text-2xl font-bold text-white">3</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                <div className="text-blue-100 text-xs font-medium mb-1">Timeframes</div>
+                <div className="text-2xl font-bold text-white">4</div>
+              </div>
+              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
+                <div className="text-blue-100 text-xs font-medium mb-1">Sectors</div>
+                <div className="text-2xl font-bold text-white">8+</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Main Content */}
-        <Tabs defaultValue="heatmap" className="space-y-4">
-          <TabsList className="grid w-full grid-cols-6">
-            <TabsTrigger value="heatmap">🔥 Market Heatmap</TabsTrigger>
-            <TabsTrigger value="live">🔴 Live Predictions</TabsTrigger>
-            <TabsTrigger value="market">Market Overview</TabsTrigger>
-            <TabsTrigger value="stocks">Historical</TabsTrigger>
-            <TabsTrigger value="models">Models</TabsTrigger>
-            <TabsTrigger value="about">About</TabsTrigger>
+        <Tabs defaultValue="heatmap" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-6 h-14 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg p-1.5 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
+            <TabsTrigger 
+              value="heatmap" 
+              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-orange-500 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+            >
+              🔥 Market Heatmap
+            </TabsTrigger>
+            <TabsTrigger 
+              value="live"
+              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+            >
+              🔴 Live Predictions
+            </TabsTrigger>
+            <TabsTrigger 
+              value="market"
+              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-green-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+            >
+              📊 Market Overview
+            </TabsTrigger>
+            <TabsTrigger 
+              value="stocks"
+              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+            >
+              📈 Historical
+            </TabsTrigger>
+            <TabsTrigger 
+              value="models"
+              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-indigo-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+            >
+              🤖 Models
+            </TabsTrigger>
+            <TabsTrigger 
+              value="about"
+              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
+            >
+              ℹ️ About
+            </TabsTrigger>
           </TabsList>
 
           {/* Market Heatmap Tab */}
