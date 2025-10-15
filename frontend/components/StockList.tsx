@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent, getChangeColor } from "@/lib/utils";
+import { StockCardLoader } from "./LoadingScreen";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -53,13 +54,7 @@ export function StockList({
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Loading stocks...</CardTitle>
-        </CardHeader>
-      </Card>
-    );
+    return <StockCardLoader />;
   }
 
   return (

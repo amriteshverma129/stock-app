@@ -45,9 +45,11 @@ export function MarketOverview({
 }) {
   if (loading) {
     return (
-      <Card>
+      <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
         <CardHeader>
-          <CardTitle>Loading market data...</CardTitle>
+          <CardTitle className="text-slate-900">
+            Loading market data...
+          </CardTitle>
         </CardHeader>
       </Card>
     );
@@ -55,10 +57,12 @@ export function MarketOverview({
 
   if (!data) {
     return (
-      <Card>
+      <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
         <CardHeader>
-          <CardTitle>Market Overview</CardTitle>
-          <CardDescription>No data available</CardDescription>
+          <CardTitle className="text-slate-900">Market Overview</CardTitle>
+          <CardDescription className="text-slate-700">
+            No data available
+          </CardDescription>
         </CardHeader>
       </Card>
     );

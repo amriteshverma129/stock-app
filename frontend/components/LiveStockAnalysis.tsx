@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatCurrency, formatPercent } from "@/lib/utils";
 import { TrendingUp, TrendingDown, Activity, Target } from "lucide-react";
+import { ChartLoader } from "./LoadingScreen";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -73,13 +74,7 @@ export function LiveStockAnalysis({ symbol }: { symbol: string }) {
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Loading predictions...</CardTitle>
-        </CardHeader>
-      </Card>
-    );
+    return <ChartLoader />;
   }
 
   if (!predictionData) {
@@ -208,19 +203,19 @@ export function LiveStockAnalysis({ symbol }: { symbol: string }) {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="text-center p-3 bg-white/50 border border-slate-200 rounded-lg shadow-sm">
               <div className="text-xs text-muted-foreground">RMSE</div>
               <div className="text-lg font-bold mt-1">₹{modelMetrics.rmse.toFixed(2)}</div>
             </div>
-            <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="text-center p-3 bg-white/50 border border-slate-200 rounded-lg shadow-sm">
               <div className="text-xs text-muted-foreground">MAE</div>
               <div className="text-lg font-bold mt-1">₹{modelMetrics.mae.toFixed(2)}</div>
             </div>
-            <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="text-center p-3 bg-white/50 border border-slate-200 rounded-lg shadow-sm">
               <div className="text-xs text-muted-foreground">R² Score</div>
               <div className="text-lg font-bold mt-1">{modelMetrics.r2.toFixed(4)}</div>
             </div>
-            <div className="text-center p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="text-center p-3 bg-white/50 border border-slate-200 rounded-lg shadow-sm">
               <div className="text-xs text-muted-foreground">MAPE</div>
               <div className="text-lg font-bold mt-1">{modelMetrics.mape.toFixed(2)}%</div>
             </div>
@@ -237,7 +232,7 @@ export function LiveStockAnalysis({ symbol }: { symbol: string }) {
         <CardContent>
           <div className="max-h-96 overflow-y-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+              <thead className="bg-white/80 border-b border-slate-200 sticky top-0">
                 <tr>
                   <th className="p-2 text-left">Date</th>
                   <th className="p-2 text-right">Days Ahead</th>
@@ -250,7 +245,7 @@ export function LiveStockAnalysis({ symbol }: { symbol: string }) {
                 {predictions.slice(0, 20).map((pred, idx) => {
                   const change = ((pred.predicted - currentPrice) / currentPrice) * 100;
                   return (
-                    <tr key={idx} className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800">
+                    <tr key={idx} className="border-b border-slate-200 hover:bg-slate-50">
                       <td className="p-2">{pred.date}</td>
                       <td className="p-2 text-right text-muted-foreground">{pred.daysAhead}d</td>
                       <td className={`p-2 text-right font-semibold ${change >= 0 ? 'text-green-600' : 'text-red-600'}`}>

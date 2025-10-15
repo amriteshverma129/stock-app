@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Poppins, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  variable: "--font-poppins",
+});
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
-  title: "Stock Market Data Science Dashboard",
-  description: "AI-powered stock market analysis and predictions",
+  title: "Stock Market Intelligence",
+  description: "AI-powered stock market analysis with real-time predictions",
 };
 
 export default function RootLayout({
@@ -16,7 +25,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={inter.className}>{children}</body>
+      <body
+        className={`${poppins.variable} ${jetbrainsMono.variable} font-sans antialiased overflow-hidden`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

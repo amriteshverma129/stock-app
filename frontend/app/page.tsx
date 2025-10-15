@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -17,17 +17,71 @@ import { ModelComparison } from "@/components/ModelComparison";
 import { LiveStockList } from "@/components/LiveStockList";
 import { LiveStockAnalysis } from "@/components/LiveStockAnalysis";
 import { MarketHeatmap } from "@/components/MarketHeatmap";
+import { LoadingScreen } from "@/components/LoadingScreen";
+import { Logo } from "@/components/Logo";
+import {
+  Activity,
+  TrendingUp,
+  Zap,
+  Brain,
+  Flame,
+  Radio,
+  BarChart3,
+  LineChart,
+  Cpu,
+  Info,
+} from "lucide-react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export default function Home() {
+  const [mounted, setMounted] = useState(false);
   const [selectedStock, setSelectedStock] = useState<string | null>(null);
-  const [selectedLiveStock, setSelectedLiveStock] = useState<string | null>(null);
+  const [selectedLiveStock, setSelectedLiveStock] = useState<string | null>(
+    null
+  );
   const [marketData, setMarketData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [scrollY, setScrollY] = useState(0);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     fetchMarketSummary();
+  }, []);
+
+  // Scroll hijacking & parallax
+  useEffect(() => {
+    const handleWheel = (e: WheelEvent) => {
+      e.preventDefault();
+
+      if (contentRef.current) {
+        const container = contentRef.current;
+        const delta = e.deltaY;
+
+        // Smooth scroll with easing
+        container.scrollBy({
+          top: delta * 0.8,
+          behavior: "auto",
+        });
+
+        setScrollY(container.scrollTop);
+      }
+    };
+
+    const container = contentRef.current;
+    if (container) {
+      container.addEventListener("wheel", handleWheel, { passive: false });
+    }
+
+    return () => {
+      if (container) {
+        container.removeEventListener("wheel", handleWheel);
+      }
+    };
   }, []);
 
   const fetchMarketSummary = async () => {
@@ -43,319 +97,342 @@ export default function Home() {
     }
   };
 
+  const parallaxOffset = scrollY * 0.5;
+
+  if (!mounted || loading) {
+    return <LoadingScreen />;
+  }
+
   return (
-    <main className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-purple-50/30 dark:from-slate-950 dark:via-blue-950/30 dark:to-purple-950/30">
-      <div className="container mx-auto py-8 px-4 max-w-[1600px]">
-        {/* Enhanced Header */}
-        <div className="mb-8 relative overflow-hidden rounded-3xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-8 shadow-2xl">
-          <div className="absolute inset-0 bg-grid-white/10"></div>
-          <div className="relative z-10">
-            <div className="flex items-center gap-4 mb-3">
-              <div className="p-4 bg-white/20 backdrop-blur-sm rounded-2xl">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+    <main className="h-screen w-screen overflow-hidden bg-gradient-to-br from-slate-50 to-blue-50">
+      <div className="h-full flex flex-col relative">
+        {/* Parallax Background Layers */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            transform: `translateY(${parallaxOffset}px)`,
+            transition: "transform 0.1s ease-out",
+          }}
+        >
+          <div className="absolute top-20 left-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-20 right-20 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl"></div>
+        </div>
+
+        {/* Header - Fixed */}
+        <div className="flex-none h-16 border-b border-slate-200 bg-white/80 backdrop-blur-xl relative z-20 shadow-sm">
+          <div className="h-full px-6 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-1.5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg shadow-md">
+                <div className="scale-75">
+                  <Logo />
+                </div>
               </div>
               <div>
-                <h1 className="text-4xl md:text-5xl font-extrabold text-white mb-2">
+                <h1 className="text-lg font-bold text-slate-900 tracking-tight">
                   Stock Market Intelligence
                 </h1>
-                <p className="text-blue-100 text-lg">
-                  AI-powered analysis • Real-time predictions • Multi-timeframe insights
+                <p className="text-[10px] text-slate-700 uppercase tracking-wider">
+                  Real-time Analysis Platform
                 </p>
               </div>
             </div>
-            
-            {/* Quick stats banner */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="text-blue-100 text-xs font-medium mb-1">Total Stocks</div>
-                <div className="text-2xl font-bold text-white">40+</div>
+
+            {/* Stats Bar */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-lg border border-slate-200 shadow-sm">
+                <div className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs font-mono text-slate-800">
+                  118 Stocks
+                </span>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="text-blue-100 text-xs font-medium mb-1">ML Models</div>
-                <div className="text-2xl font-bold text-white">3</div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-lg border border-slate-200 shadow-sm">
+                <Cpu className="w-3.5 h-3.5 text-purple-500" />
+                <span className="text-xs font-mono text-slate-800">
+                  13 Models
+                </span>
               </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="text-blue-100 text-xs font-medium mb-1">Timeframes</div>
-                <div className="text-2xl font-bold text-white">4</div>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/20">
-                <div className="text-blue-100 text-xs font-medium mb-1">Sectors</div>
-                <div className="text-2xl font-bold text-white">8+</div>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-white/80 rounded-lg border border-slate-200 shadow-sm">
+                <Zap className="w-3.5 h-3.5 text-yellow-500" />
+                <span className="text-xs font-mono text-slate-800">Live</span>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="heatmap" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-6 h-14 bg-white/80 dark:bg-slate-900/80 backdrop-blur-lg p-1.5 rounded-2xl shadow-lg border border-slate-200 dark:border-slate-700">
-            <TabsTrigger 
-              value="heatmap" 
-              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-orange-500 data-[state=active]:to-red-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-            >
-              🔥 Market Heatmap
-            </TabsTrigger>
-            <TabsTrigger 
-              value="live"
-              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-            >
-              🔴 Live Predictions
-            </TabsTrigger>
-            <TabsTrigger 
-              value="market"
-              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-green-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-            >
-              📊 Market Overview
-            </TabsTrigger>
-            <TabsTrigger 
-              value="stocks"
-              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-purple-500 data-[state=active]:to-pink-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-            >
-              📈 Historical
-            </TabsTrigger>
-            <TabsTrigger 
-              value="models"
-              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-indigo-500 data-[state=active]:to-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-            >
-              🤖 Models
-            </TabsTrigger>
-            <TabsTrigger 
-              value="about"
-              className="rounded-xl data-[state=active]:bg-gradient-to-br data-[state=active]:from-slate-600 data-[state=active]:to-slate-700 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all duration-300"
-            >
-              ℹ️ About
-            </TabsTrigger>
-          </TabsList>
-
-          {/* Market Heatmap Tab */}
-          <TabsContent value="heatmap" className="space-y-4">
-            <MarketHeatmap />
-          </TabsContent>
-
-          {/* Live Predictions Tab */}
-          <TabsContent value="live" className="space-y-4">
-            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 border-blue-200 dark:border-blue-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                  </span>
-                  Live Stock Market Data
-                </CardTitle>
-                <CardDescription>
-                  Real-time Indian stock data with multi-timeframe ML predictions (1M, 6M, 1Y, 5Y)
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                <LiveStockList onSelectStock={setSelectedLiveStock} />
-              </div>
-              <div className="lg:col-span-2">
-                {selectedLiveStock ? (
-                  <LiveStockAnalysis symbol={selectedLiveStock} />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Select a Stock</CardTitle>
-                      <CardDescription>
-                        Choose a stock to view real-time data and multi-timeframe predictions
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p className="text-sm">
-                          ← Select a stock from the list to get started
-                        </p>
-                        <p className="text-xs mt-2">
-                          You'll see predictions for 1 Month, 6 Months, 1 Year, and 5 Years
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
+        {/* Main Content Area */}
+        <div className="flex-1 overflow-hidden relative z-10">
+          <Tabs defaultValue="heatmap" className="h-full flex flex-col">
+            {/* Tab Navigation */}
+            <div className="flex-none px-6 pt-3">
+              <TabsList className="inline-flex h-10 items-center justify-start gap-1 bg-white/80 p-1 rounded-lg border border-slate-200 backdrop-blur-sm shadow-sm">
+                <TabsTrigger
+                  value="heatmap"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 rounded-md hover:text-slate-900 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  <Flame className="w-3.5 h-3.5" />
+                  Heatmap
+                </TabsTrigger>
+                <TabsTrigger
+                  value="live"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 rounded-md hover:text-slate-900 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  <Radio className="w-3.5 h-3.5" />
+                  Live
+                </TabsTrigger>
+                <TabsTrigger
+                  value="market"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 rounded-md hover:text-slate-900 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  <BarChart3 className="w-3.5 h-3.5" />
+                  Market
+                </TabsTrigger>
+                <TabsTrigger
+                  value="stocks"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 rounded-md hover:text-slate-900 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  <LineChart className="w-3.5 h-3.5" />
+                  Historical
+                </TabsTrigger>
+                <TabsTrigger
+                  value="models"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 rounded-md hover:text-slate-900 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  <Brain className="w-3.5 h-3.5" />
+                  Models
+                </TabsTrigger>
+                <TabsTrigger
+                  value="about"
+                  className="inline-flex items-center gap-2 px-4 py-2 text-xs font-medium text-slate-600 rounded-md hover:text-slate-900 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
+                >
+                  <Info className="w-3.5 h-3.5" />
+                  About
+                </TabsTrigger>
+              </TabsList>
             </div>
-          </TabsContent>
 
-          {/* Market Overview Tab */}
-          <TabsContent value="market" className="space-y-4">
-            <Card className="bg-gradient-to-r from-green-50 to-blue-50 dark:from-green-900/20 dark:to-blue-900/20">
-              <CardHeader>
-                <CardTitle>Market Overview - Live Data</CardTitle>
-                <CardDescription>
-                  Real-time market statistics and top movers
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                <LiveStockList onSelectStock={setSelectedLiveStock} />
-              </div>
-              <div className="lg:col-span-2">
-                {selectedLiveStock ? (
-                  <LiveStockAnalysis symbol={selectedLiveStock} />
-                ) : (
-                  <MarketOverview data={marketData} loading={loading} />
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Historical Analysis Tab */}
-          <TabsContent value="stocks" className="space-y-4">
-            <Card className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20">
-              <CardHeader>
-                <CardTitle>Historical Data Analysis</CardTitle>
-                <CardDescription>
-                  Deep-dive analysis with historical data (up to 10 years)
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                <LiveStockList onSelectStock={setSelectedStock} />
-              </div>
-              <div className="lg:col-span-2">
-                {selectedStock ? (
-                  <LiveStockAnalysis symbol={selectedStock} />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Select a Stock</CardTitle>
-                      <CardDescription>
-                        Choose a stock to view detailed historical analysis
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p className="text-sm">
-                          ← Select a stock to view historical patterns and trends
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* Model Comparison Tab */}
-          <TabsContent value="models" className="space-y-4">
-            <Card className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20">
-              <CardHeader>
-                <CardTitle>ML Model Comparison</CardTitle>
-                <CardDescription>
-                  Compare performance of different machine learning algorithms
-                </CardDescription>
-              </CardHeader>
-            </Card>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <div className="lg:col-span-1">
-                <LiveStockList onSelectStock={setSelectedLiveStock} />
-              </div>
-              <div className="lg:col-span-2">
-                {selectedLiveStock ? (
-                  <ModelComparison symbol={selectedLiveStock} />
-                ) : (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Select a Stock</CardTitle>
-                      <CardDescription>
-                        Choose a stock to compare ML model performance
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p className="text-sm">
-                          ← Select a stock to compare Random Forest, Gradient Boosting, and Linear models
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-
-          {/* About Tab */}
-          <TabsContent value="about" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>About This Dashboard</CardTitle>
-                <CardDescription>
-                  Stock Market Data Science Platform
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div>
-                  <h3 className="font-semibold mb-2">🎯 Features</h3>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                    <li><strong>🆕 Real-time Indian stock data</strong> from Yahoo Finance</li>
-                    <li><strong>🆕 Multi-timeframe predictions</strong> (1M, 6M, 1Y, 5Y)</li>
-                    <li>Machine Learning models (Random Forest, Gradient Boosting)</li>
-                    <li>Technical indicators (MA, RSI, MACD, Bollinger Bands)</li>
-                    <li>Price targets with confidence levels</li>
-                    <li>Feature importance analysis</li>
-                    <li>Model performance metrics</li>
-                  </ul>
+            {/* Scrollable Content with Parallax */}
+            <div
+              ref={contentRef}
+              className="flex-1 overflow-y-auto px-6 pb-4"
+              style={{
+                scrollBehavior: "auto",
+              }}
+            >
+              <TabsContent value="heatmap" className="mt-4">
+                <div
+                  style={{
+                    transform: `translateY(${scrollY * -0.1}px)`,
+                    transition: "transform 0.1s ease-out",
+                  }}
+                >
+                  <MarketHeatmap />
                 </div>
+              </TabsContent>
 
-                <div>
-                  <h3 className="font-semibold mb-2">🛠️ Technology Stack</h3>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="font-medium mb-1">Backend</p>
-                      <ul className="list-disc list-inside text-slate-600 dark:text-slate-400">
-                        <li>FastAPI</li>
-                        <li>Scikit-learn</li>
-                        <li>Pandas & NumPy</li>
-                      </ul>
-                    </div>
-                    <div>
-                      <p className="font-medium mb-1">Frontend</p>
-                      <ul className="list-disc list-inside text-slate-600 dark:text-slate-400">
-                        <li>Next.js 14</li>
-                        <li>shadcn/ui</li>
-                        <li>visx Charts</li>
-                      </ul>
-                    </div>
+              <TabsContent value="live" className="mt-4">
+                <div className="grid grid-cols-12 gap-4 h-[calc(100vh-160px)]">
+                  <div className="col-span-3 h-full overflow-y-auto">
+                    <LiveStockList onSelectStock={setSelectedLiveStock} />
+                  </div>
+                  <div className="col-span-9 h-full overflow-y-auto">
+                    {selectedLiveStock ? (
+                      <LiveStockAnalysis symbol={selectedLiveStock} />
+                    ) : (
+                      <Card className="h-full flex items-center justify-center border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
+                        <CardContent className="text-center">
+                          <Radio className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+                          <CardTitle className="text-slate-300 mb-2 text-lg">
+                            Select a Stock
+                          </CardTitle>
+                          <CardDescription className="text-slate-700 text-sm">
+                            Choose from 118 stocks to view live predictions
+                          </CardDescription>
+                        </CardContent>
+                      </Card>
+                    )}
                   </div>
                 </div>
+              </TabsContent>
 
-                <div>
-                  <h3 className="font-semibold mb-2">📊 ML Models</h3>
-                  <ul className="list-disc list-inside space-y-1 text-sm text-slate-600 dark:text-slate-400">
-                    <li>
-                      <strong>Random Forest</strong> - Primary model with 100
-                      estimators
-                    </li>
-                    <li>
-                      <strong>Gradient Boosting</strong> - Alternative ensemble
-                      method
-                    </li>
-                    <li>
-                      <strong>Linear Models</strong> - Ridge & Lasso for
-                      baseline comparison
-                    </li>
-                  </ul>
+              <TabsContent value="market" className="mt-4">
+                <div className="grid grid-cols-12 gap-4 h-[calc(100vh-160px)]">
+                  <div className="col-span-3 h-full overflow-y-auto">
+                    <LiveStockList onSelectStock={setSelectedLiveStock} />
+                  </div>
+                  <div className="col-span-9 h-full overflow-y-auto">
+                    {selectedLiveStock ? (
+                      <LiveStockAnalysis symbol={selectedLiveStock} />
+                    ) : (
+                      <MarketOverview data={marketData} loading={loading} />
+                    )}
+                  </div>
                 </div>
+              </TabsContent>
 
-                <div className="pt-4 border-t">
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    ⚠️ <strong>Disclaimer:</strong> This tool is for educational
-                    purposes only. Not financial advice. Always consult with a
-                    financial advisor before making investment decisions.
-                  </p>
+              <TabsContent value="stocks" className="mt-4">
+                <div className="grid grid-cols-12 gap-4 h-[calc(100vh-160px)]">
+                  <div className="col-span-3 h-full overflow-y-auto">
+                    <LiveStockList onSelectStock={setSelectedStock} />
+                  </div>
+                  <div className="col-span-9 h-full overflow-y-auto">
+                    {selectedStock ? (
+                      <LiveStockAnalysis symbol={selectedStock} />
+                    ) : (
+                      <Card className="h-full flex items-center justify-center border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
+                        <CardContent className="text-center">
+                          <LineChart className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+                          <CardTitle className="text-slate-300 mb-2 text-lg">
+                            Select a Stock
+                          </CardTitle>
+                          <CardDescription className="text-slate-700 text-sm">
+                            View historical analysis and patterns
+                          </CardDescription>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+
+              <TabsContent value="models" className="mt-4">
+                <div className="grid grid-cols-12 gap-4 h-[calc(100vh-160px)]">
+                  <div className="col-span-3 h-full overflow-y-auto">
+                    <LiveStockList onSelectStock={setSelectedLiveStock} />
+                  </div>
+                  <div className="col-span-9 h-full overflow-y-auto">
+                    {selectedLiveStock ? (
+                      <ModelComparison symbol={selectedLiveStock} />
+                    ) : (
+                      <Card className="h-full flex items-center justify-center border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
+                        <CardContent className="text-center">
+                          <Brain className="w-16 h-16 mx-auto mb-4 text-slate-700" />
+                          <CardTitle className="text-slate-300 mb-2 text-lg">
+                            ML Model Comparison
+                          </CardTitle>
+                          <CardDescription className="text-slate-700 text-sm">
+                            Select a stock to compare 13 machine learning models
+                          </CardDescription>
+                        </CardContent>
+                      </Card>
+                    )}
+                  </div>
+                </div>
+              </TabsContent>
+
+              <TabsContent value="about" className="mt-4">
+                <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
+                  <CardHeader className="border-b border-slate-200">
+                    <CardTitle className="text-xl text-slate-900">
+                      Stock Market Intelligence Platform
+                    </CardTitle>
+                    <CardDescription className="text-slate-700">
+                      Advanced AI-powered stock analysis and predictions
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pt-6 space-y-6">
+                    <div>
+                      <h3 className="font-semibold mb-3 text-sm uppercase tracking-wider text-slate-700">
+                        Features
+                      </h3>
+                      <ul className="grid grid-cols-2 gap-3 text-sm">
+                        <li className="flex items-center gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          118 Indian stocks tracked
+                        </li>
+                        <li className="flex items-center gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          Real-time Yahoo Finance data
+                        </li>
+                        <li className="flex items-center gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          13 ML prediction models
+                        </li>
+                        <li className="flex items-center gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          Multi-timeframe analysis
+                        </li>
+                        <li className="flex items-center gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          Interactive heatmaps
+                        </li>
+                        <li className="flex items-center gap-2 text-slate-700">
+                          <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                          Technical indicators
+                        </li>
+                      </ul>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-3 text-sm uppercase tracking-wider text-slate-700">
+                        ML Models
+                      </h3>
+                      <div className="grid grid-cols-4 gap-2 text-xs font-mono">
+                        {[
+                          "Random Forest",
+                          "Gradient Boost",
+                          "XGBoost",
+                          "LightGBM",
+                          "CatBoost",
+                          "CNN",
+                          "LSTM",
+                          "GRU",
+                          "RNN",
+                          "Linear Reg",
+                          "Ridge",
+                          "Lasso",
+                          "ElasticNet",
+                        ].map((model) => (
+                          <div
+                            key={model}
+                            className="p-2 bg-gradient-to-br from-blue-50 to-purple-50 rounded border border-slate-200 text-slate-700 text-center shadow-sm hover:shadow-md transition-shadow"
+                          >
+                            {model}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h3 className="font-semibold mb-3 text-sm uppercase tracking-wider text-slate-700">
+                        Sectors
+                      </h3>
+                      <div className="flex flex-wrap gap-2 text-xs">
+                        {[
+                          "IT",
+                          "Banking",
+                          "Auto",
+                          "Energy",
+                          "FMCG",
+                          "Pharma",
+                          "Financial",
+                          "Metals",
+                          "Infrastructure",
+                          "Real Estate",
+                          "Telecom",
+                          "Consumer",
+                        ].map((sector) => (
+                          <span
+                            key={sector}
+                            className="px-3 py-1.5 bg-white/80 rounded-full border border-slate-200 text-slate-700 shadow-sm hover:shadow-md transition-shadow"
+                          >
+                            {sector}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-200">
+                      <p className="text-xs text-slate-600 font-mono">
+                        DISCLAIMER: For educational purposes only. Not financial
+                        advice.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </div>
+          </Tabs>
+        </div>
       </div>
     </main>
   );

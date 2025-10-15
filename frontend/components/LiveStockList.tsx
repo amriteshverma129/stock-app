@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
+import { StockCardLoader } from "./LoadingScreen";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -50,13 +51,7 @@ export function LiveStockList({
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Loading stocks...</CardTitle>
-        </CardHeader>
-      </Card>
-    );
+    return <StockCardLoader />;
   }
 
   return (
@@ -92,4 +87,3 @@ export function LiveStockList({
     </Card>
   );
 }
-
