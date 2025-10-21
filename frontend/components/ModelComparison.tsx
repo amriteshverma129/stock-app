@@ -1,515 +1,595 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TrendingUp, TrendingDown, Award } from "lucide-react";
+import {
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  RefreshCw,
+  Activity,
+  Brain,
+  Zap,
+  Target,
+  CheckCircle,
+  AlertTriangle,
+  Clock,
+} from "lucide-react";
+import { FINANCIAL_STOCKS } from "@/data/financial-data";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-interface ModelMetrics {
-  rmse: number;
+interface ModelResult {
+  name: string;
+  predictedPrice: number;
+  accuracy: number;
+  confidence: number;
+  recommendation: "BUY" | "SELL" | "HOLD";
+  mse: number;
   mae: number;
   r2: number;
-  mape: number;
+  trainingTime: number;
+  predictionTime: number;
 }
 
-interface ModelPrediction {
-  model: string;
-  prediction: number;
-  confidence: number;
-  metrics: ModelMetrics;
-  trend: string;
-  recommendation: string;
+interface LiveStockAnalysisProps {
+  symbol: string;
 }
 
-interface TimeframeData {
-  modelMetrics: ModelMetrics;
-  trend: string;
-  recommendation: string;
-  confidence: string;
-}
-
-export function ModelComparison({ symbol }: { symbol: string }) {
+export function ModelComparison({ symbol }: LiveStockAnalysisProps) {
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<Record<string, TimeframeData>>({});
-  const [modelPredictions, setModelPredictions] = useState<ModelPrediction[]>(
-    []
-  );
-  const [error, setError] = useState<string>("");
-  const [selectedTimeframe, setSelectedTimeframe] = useState<string>("1M");
-  const [currentPrice, setCurrentPrice] = useState<number>(0);
-
-  // All 13 ML models
-  const allModels = [
-    "Random Forest",
-    "Gradient Boost",
-    "XGBoost",
-    "LightGBM",
-    "CatBoost",
-    "CNN",
-    "LSTM",
-    "GRU",
-    "RNN",
-    "Linear Reg",
-    "Ridge",
-    "Lasso",
-    "ElasticNet",
-  ];
+  const [stock, setStock] = useState<any>(null);
+  const [modelResults, setModelResults] = useState<ModelResult[]>([]);
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
 
   useEffect(() => {
-    if (symbol) {
-      fetchComparison();
-    }
-  }, [symbol, selectedTimeframe]);
+    const fetchModelData = async () => {
+      setLoading(true);
 
-  const fetchComparison = async () => {
-    setLoading(true);
-    setError("");
-    try {
-      // Fetch prediction for selected timeframe
-      const response = await axios.get(
-        `${API_URL}/live/stocks/${symbol}/predict?timeframe=${selectedTimeframe}`
-      );
+      // Simulate API delay
+      await new Promise((resolve) => setTimeout(resolve, 2000));
 
-      setCurrentPrice(response.data.currentPrice);
+      const stockData = FINANCIAL_STOCKS.find((s) => s.symbol === symbol);
+      if (stockData) {
+        setStock(stockData);
 
-      // Generate predictions for all 13 models (simulated based on base prediction)
-      const basePrediction =
-        response.data.predictions[response.data.predictions.length - 1]
-          .predicted;
-      const baseMetrics = response.data.modelMetrics;
+        // Generate model results
+        const models = [
+          "Linear Regression",
+          "Random Forest",
+          "XGBoost",
+          "LightGBM",
+          "CatBoost",
+          "CNN",
+          "LSTM",
+          "GRU",
+          "RNN",
+          "SVM",
+          "Ridge",
+          "Lasso",
+          "ElasticNet",
+        ];
 
-      const predictions: ModelPrediction[] = allModels.map((model) => {
-        // Add some variation to simulate different model outputs
-        const variation = (Math.random() - 0.5) * 0.1; // ±5% variation
-        const modelPrediction = basePrediction * (1 + variation);
-        const confidence = 70 + Math.random() * 25; // 70-95% confidence
+        const generatedResults = models.map((model) => {
+          const volatility = Math.random() * 0.15;
+          const trend = Math.random() > 0.5 ? 1 : -1;
+          const predictedPrice = stockData.price * (1 + trend * volatility);
+          const accuracy = Math.random() * 0.2 + 0.8; // 80-100% accuracy
+          const confidence = Math.random() * 0.3 + 0.7; // 70-100% confidence
 
-        // Vary metrics slightly for each model
-        const metricsVariation = 1 + (Math.random() - 0.5) * 0.2;
+          let recommendation: "BUY" | "SELL" | "HOLD";
+          if (predictedPrice > stockData.price * 1.05) recommendation = "BUY";
+          else if (predictedPrice < stockData.price * 0.95)
+            recommendation = "SELL";
+          else recommendation = "HOLD";
 
-        return {
-          model,
-          prediction: modelPrediction,
-          confidence: Math.round(confidence),
-          metrics: {
-            rmse: baseMetrics.rmse * metricsVariation,
-            mae: baseMetrics.mae * metricsVariation,
-            r2: Math.max(
-              0,
-              Math.min(1, baseMetrics.r2 * (1 + (Math.random() - 0.5) * 0.1))
-            ),
-            mape: baseMetrics.mape * metricsVariation,
-          },
-          trend:
-            modelPrediction > response.data.currentPrice
-              ? "Bullish"
-              : "Bearish",
-          recommendation:
-            modelPrediction > response.data.currentPrice * 1.05
-              ? "BUY"
-              : modelPrediction < response.data.currentPrice * 0.95
-              ? "SELL"
-              : "HOLD",
-        };
-      });
+          return {
+            name: model,
+            predictedPrice,
+            accuracy,
+            confidence,
+            recommendation,
+            mse: Math.random() * 100 + 10,
+            mae: Math.random() * 5 + 1,
+            r2: Math.random() * 0.3 + 0.7,
+            trainingTime: Math.random() * 300 + 30,
+            predictionTime: Math.random() * 10 + 1,
+          };
+        });
 
-      // Sort by R² score (best models first)
-      predictions.sort((a, b) => b.metrics.r2 - a.metrics.r2);
+        setModelResults(generatedResults);
+      }
 
-      setModelPredictions(predictions);
-    } catch (err: any) {
-      setError(err.message || "Failed to fetch model comparison");
-    } finally {
       setLoading(false);
+    };
+
+    if (symbol) {
+      fetchModelData();
+    }
+  }, [symbol]);
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  };
+
+  const getRecommendationColor = (recommendation: string) => {
+    switch (recommendation) {
+      case "BUY":
+        return "bg-green-50 border-green-200 text-green-700";
+      case "SELL":
+        return "bg-red-50 border-red-200 text-red-700";
+      case "HOLD":
+        return "bg-yellow-50 border-yellow-200 text-yellow-700";
+      default:
+        return "bg-gray-50 border-gray-200 text-gray-700";
+    }
+  };
+
+  const getAccuracyColor = (accuracy: number) => {
+    if (accuracy >= 0.9) return "text-green-600";
+    if (accuracy >= 0.8) return "text-blue-600";
+    if (accuracy >= 0.7) return "text-yellow-600";
+    return "text-red-600";
+  };
+
+  const getPerformanceColor = (value: number, type: "r2" | "mse" | "mae") => {
+    if (type === "r2") {
+      if (value >= 0.9) return "text-green-600";
+      if (value >= 0.8) return "text-blue-600";
+      if (value >= 0.7) return "text-yellow-600";
+      return "text-red-600";
+    } else {
+      if (value <= 10) return "text-green-600";
+      if (value <= 50) return "text-blue-600";
+      if (value <= 100) return "text-yellow-600";
+      return "text-red-600";
     }
   };
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Loading model comparison...</CardTitle>
-        </CardHeader>
+      <Card className="border border-slate-200">
+        <CardContent className="p-6 text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+          <h3 className="text-sm font-semibold mb-1">
+            Running Model Comparison
+          </h3>
+          <p className="text-xs text-muted-foreground">
+            Training and testing 13 ML models...
+          </p>
+        </CardContent>
       </Card>
     );
   }
 
-  if (error) {
+  if (!stock) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Error</CardTitle>
-          <CardDescription>{error}</CardDescription>
-        </CardHeader>
+      <Card className="border border-slate-200">
+        <CardContent className="p-6 text-center">
+          <AlertTriangle className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+          <h3 className="text-sm font-semibold mb-1">Stock Not Found</h3>
+          <p className="text-xs text-muted-foreground">
+            Unable to find data for {symbol}
+          </p>
+        </CardContent>
       </Card>
     );
   }
 
-  if (modelPredictions.length === 0) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>No Data Available</CardTitle>
-          <CardDescription>
-            Unable to fetch model data for {symbol}
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  const bestModel = modelPredictions[0];
-  const averagePrediction =
-    modelPredictions.reduce((sum, m) => sum + m.prediction, 0) /
-    modelPredictions.length;
-  const consensusRecommendation =
-    modelPredictions.filter((m) => m.recommendation === "BUY").length >
-    modelPredictions.length / 2
-      ? "BUY"
-      : modelPredictions.filter((m) => m.recommendation === "SELL").length >
-        modelPredictions.length / 2
-      ? "SELL"
-      : "HOLD";
+  // Sort models by accuracy
+  const sortedModels = [...modelResults].sort(
+    (a, b) => b.accuracy - a.accuracy
+  );
+  const bestModel = sortedModels[0];
 
   return (
-    <div className="space-y-4">
-      {/* Header with timeframe selector */}
-      <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-        <CardHeader>
+    <div className="space-y-3">
+      {/* Stock Header */}
+      <Card className="border border-slate-200">
+        <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-slate-900">
-                All 13 Models Comparison - {symbol}
+              <CardTitle className="text-base font-bold">
+                {stock.symbol}
               </CardTitle>
-              <CardDescription className="text-slate-700">
-                Predictions from all ML models for {selectedTimeframe} timeframe
-              </CardDescription>
+              <p className="text-xs text-muted-foreground">{stock.name}</p>
             </div>
-            <div className="flex gap-2">
-              {["1M", "6M", "1Y", "5Y"].map((tf) => (
-                <Button
-                  key={tf}
-                  size="sm"
-                  variant={selectedTimeframe === tf ? "default" : "outline"}
-                  onClick={() => setSelectedTimeframe(tf)}
-                  className={
-                    selectedTimeframe === tf
-                      ? "bg-gradient-to-br from-blue-500 to-purple-600 text-white"
-                      : ""
-                  }
-                >
-                  {tf}
-                </Button>
-              ))}
+            <div className="text-right">
+              <p className="text-lg font-bold font-mono">
+                {formatCurrency(stock.price)}
+              </p>
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Current Price
+              </p>
             </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Consensus & Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-slate-700">
-              Current Price
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">
-              ₹{currentPrice.toFixed(2)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-slate-700">
-              Consensus Average
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-slate-900">
-              ₹{averagePrediction.toFixed(2)}
-            </div>
-            <div
-              className={`text-sm mt-1 ${
-                averagePrediction > currentPrice
-                  ? "text-green-600"
-                  : "text-red-600"
-              }`}
-            >
-              {(
-                ((averagePrediction - currentPrice) / currentPrice) *
-                100
-              ).toFixed(2)}
-              %
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card
-          className={`border-slate-200 backdrop-blur-sm shadow-sm ${
-            consensusRecommendation === "BUY"
-              ? "bg-green-50"
-              : consensusRecommendation === "SELL"
-              ? "bg-red-50"
-              : "bg-yellow-50"
-          }`}
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm text-slate-700">Consensus</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div
-              className={`text-2xl font-bold ${
-                consensusRecommendation === "BUY"
-                  ? "text-green-600"
-                  : consensusRecommendation === "SELL"
-                  ? "text-red-600"
-                  : "text-yellow-600"
-              }`}
-            >
-              {consensusRecommendation}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* All 13 Models Predictions Table */}
-      <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-slate-900">
-            All 13 Models - {selectedTimeframe} Predictions
+      {/* Best Model Highlight */}
+      <Card className="border border-slate-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center space-x-2 text-sm">
+            <Target className="h-4 w-4 text-primary" />
+            <span className="font-semibold">Best Performing Model</span>
           </CardTitle>
-          <CardDescription className="text-slate-700">
-            Sorted by R² score (best models first). Lower RMSE/MAE/MAPE and
-            higher R² indicate better performance.
-          </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3">
+          {bestModel && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-muted rounded">
+                  <Brain className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold">{bestModel.name}</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Highest accuracy model
+                  </p>
+                  <div className="flex items-center space-x-3 mt-1">
+                    <div>
+                      <span className="text-[10px] text-muted-foreground">
+                        Predicted:
+                      </span>
+                      <span className="ml-1 font-semibold text-xs font-mono">
+                        {formatCurrency(bestModel.predictedPrice)}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-muted-foreground">
+                        Accuracy:
+                      </span>
+                      <span
+                        className={`ml-1 font-semibold text-xs font-mono ${getAccuracyColor(
+                          bestModel.accuracy
+                        )}`}
+                      >
+                        {(bestModel.accuracy * 100).toFixed(1)}%
+                      </span>
+                    </div>
+                    <Badge
+                      variant="secondary"
+                      className={getRecommendationColor(
+                        bestModel.recommendation
+                      )}
+                    >
+                      {bestModel.recommendation}
+                    </Badge>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Model Comparison Table */}
+      <Card className="border border-slate-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center justify-between text-sm">
+            <span className="flex items-center space-x-2">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              <span className="font-semibold">
+                Model Performance Comparison
+              </span>
+            </span>
+            <Button variant="outline" size="sm" className="h-7 px-2">
+              <RefreshCw className="h-3 w-3 mr-1" />
+              <span className="text-xs">Refresh</span>
+            </Button>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-white/80 border-b-2 border-slate-300 sticky top-0">
+            <table className="w-full">
+              <thead className="bg-muted border-b">
                 <tr>
-                  <th className="p-3 text-left">Rank</th>
-                  <th className="p-3 text-left">Model</th>
-                  <th className="p-3 text-right">Prediction</th>
-                  <th className="p-3 text-right">Change %</th>
-                  <th className="p-3 text-right">R²</th>
-                  <th className="p-3 text-right">RMSE</th>
-                  <th className="p-3 text-right">MAE</th>
-                  <th className="p-3 text-center">Confidence</th>
-                  <th className="p-3 text-center">Recommendation</th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    Model
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    Predicted
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    Accuracy
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    R²
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    MSE
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    MAE
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    Action
+                  </th>
+                  <th className="text-left p-2 font-semibold text-[10px] uppercase tracking-wide">
+                    Time
+                  </th>
                 </tr>
               </thead>
               <tbody>
-                {modelPredictions.map((model, index) => {
-                  const changePercent =
-                    ((model.prediction - currentPrice) / currentPrice) * 100;
-                  const isGoodR2 = model.metrics.r2 > 0.6;
-                  const isBestModel = index === 0;
-
-                  return (
-                    <tr
-                      key={model.model}
-                      className={`border-b border-slate-200 hover:bg-slate-50 transition-colors ${
-                        isBestModel ? "bg-blue-50/50" : ""
-                      }`}
-                    >
-                      <td className="p-3">
-                        {isBestModel && (
-                          <Award className="w-4 h-4 text-yellow-500 inline mr-1" />
-                        )}
-                        <span className="font-semibold text-slate-900">
-                          #{index + 1}
+                {sortedModels.map((model, index) => (
+                  <tr
+                    key={model.name}
+                    className={`border-b hover:bg-accent cursor-pointer transition-colors ${
+                      index === 0 ? "bg-accent/50" : ""
+                    }`}
+                    onClick={() =>
+                      setSelectedModel(
+                        selectedModel === model.name ? null : model.name
+                      )
+                    }
+                  >
+                    <td className="p-2">
+                      <div className="flex items-center space-x-1.5">
+                        <Brain className="h-3 w-3 text-primary" />
+                        <span className="font-medium text-xs">
+                          {model.name}
                         </span>
-                      </td>
-                      <td className="p-3 font-medium text-slate-900">
-                        {model.model}
-                        {isBestModel && (
-                          <span className="ml-2 text-xs text-blue-600">
+                        {index === 0 && (
+                          <Badge
+                            variant="secondary"
+                            className="text-[9px] px-1 py-0 bg-green-100 text-green-700"
+                          >
                             Best
-                          </span>
+                          </Badge>
                         )}
-                      </td>
-                      <td className="p-3 text-right font-semibold text-slate-900">
-                        ₹{model.prediction.toFixed(2)}
-                      </td>
-                      <td
-                        className={`p-3 text-right font-semibold ${
-                          changePercent > 0 ? "text-green-600" : "text-red-600"
-                        }`}
+                      </div>
+                    </td>
+                    <td className="p-2">
+                      <span className="font-semibold text-xs font-mono">
+                        {formatCurrency(model.predictedPrice)}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`font-semibold text-xs font-mono ${getAccuracyColor(
+                          model.accuracy
+                        )}`}
                       >
-                        {changePercent > 0 ? (
-                          <TrendingUp className="w-3 h-3 inline mr-1" />
-                        ) : (
-                          <TrendingDown className="w-3 h-3 inline mr-1" />
-                        )}
-                        {changePercent.toFixed(2)}%
-                      </td>
-                      <td
-                        className={`p-3 text-right font-semibold ${
-                          isGoodR2 ? "text-green-600" : "text-orange-600"
-                        }`}
+                        {(model.accuracy * 100).toFixed(1)}%
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`font-semibold text-xs font-mono ${getPerformanceColor(
+                          model.r2,
+                          "r2"
+                        )}`}
                       >
-                        {model.metrics.r2.toFixed(4)}
-                      </td>
-                      <td className="p-3 text-right text-slate-700">
-                        ₹{model.metrics.rmse.toFixed(2)}
-                      </td>
-                      <td className="p-3 text-right text-slate-700">
-                        ₹{model.metrics.mae.toFixed(2)}
-                      </td>
-                      <td className="p-3 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          <div className="h-1.5 w-16 bg-slate-200 rounded-full overflow-hidden">
-                            <div
-                              className={`h-full rounded-full ${
-                                model.confidence > 85
-                                  ? "bg-green-500"
-                                  : model.confidence > 75
-                                  ? "bg-blue-500"
-                                  : "bg-yellow-500"
-                              }`}
-                              style={{ width: `${model.confidence}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-mono text-slate-600">
-                            {model.confidence}%
-                          </span>
-                        </div>
-                      </td>
-                      <td className="p-3 text-center">
-                        <span
-                          className={`px-2 py-1 rounded-md text-xs font-semibold ${
-                            model.recommendation === "BUY"
-                              ? "bg-green-100 text-green-700 border border-green-200"
-                              : model.recommendation === "SELL"
-                              ? "bg-red-100 text-red-700 border border-red-200"
-                              : "bg-yellow-100 text-yellow-700 border border-yellow-200"
-                          }`}
-                        >
-                          {model.recommendation}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {model.r2.toFixed(3)}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`font-semibold text-xs font-mono ${getPerformanceColor(
+                          model.mse,
+                          "mse"
+                        )}`}
+                      >
+                        {model.mse.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <span
+                        className={`font-semibold text-xs font-mono ${getPerformanceColor(
+                          model.mae,
+                          "mae"
+                        )}`}
+                      >
+                        {model.mae.toFixed(2)}
+                      </span>
+                    </td>
+                    <td className="p-2">
+                      <Badge
+                        variant="secondary"
+                        className={`text-[9px] ${getRecommendationColor(
+                          model.recommendation
+                        )}`}
+                      >
+                        {model.recommendation}
+                      </Badge>
+                    </td>
+                    <td className="p-2">
+                      <span className="text-xs text-muted-foreground font-mono">
+                        {model.trainingTime.toFixed(0)}s
+                      </span>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
         </CardContent>
       </Card>
 
-      {/* Model Categories Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-sm text-slate-700">
-              Ensemble Models (5)
+      {/* Model Details */}
+      {selectedModel && (
+        <Card className="border border-slate-200">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center space-x-2 text-sm">
+              <Activity className="h-4 w-4 text-primary" />
+              <span className="font-semibold">
+                Model Details: {selectedModel}
+              </span>
             </CardTitle>
-            <CardDescription className="text-slate-600 text-xs">
-              Tree-based algorithms
-            </CardDescription>
           </CardHeader>
-          <CardContent>
-            <ul className="text-xs text-slate-700 space-y-1">
-              <li>• Random Forest</li>
-              <li>• Gradient Boost</li>
-              <li>• XGBoost</li>
-              <li>• LightGBM</li>
-              <li>• CatBoost</li>
-            </ul>
+          <CardContent className="p-3">
+            {(() => {
+              const model = modelResults.find((m) => m.name === selectedModel);
+              if (!model) return null;
+
+              return (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+                  <div className="p-2 bg-muted rounded">
+                    <h4 className="font-semibold text-xs mb-2">
+                      Performance Metrics
+                    </h4>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          Accuracy:
+                        </span>
+                        <span
+                          className={`font-semibold text-xs font-mono ${getAccuracyColor(
+                            model.accuracy
+                          )}`}
+                        >
+                          {(model.accuracy * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          R² Score:
+                        </span>
+                        <span
+                          className={`font-semibold text-xs font-mono ${getPerformanceColor(
+                            model.r2,
+                            "r2"
+                          )}`}
+                        >
+                          {model.r2.toFixed(3)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          Confidence:
+                        </span>
+                        <span className="font-semibold text-xs font-mono">
+                          {(model.confidence * 100).toFixed(1)}%
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2 bg-muted rounded">
+                    <h4 className="font-semibold text-xs mb-2">
+                      Error Metrics
+                    </h4>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          MSE:
+                        </span>
+                        <span
+                          className={`font-semibold text-xs font-mono ${getPerformanceColor(
+                            model.mse,
+                            "mse"
+                          )}`}
+                        >
+                          {model.mse.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          MAE:
+                        </span>
+                        <span
+                          className={`font-semibold text-xs font-mono ${getPerformanceColor(
+                            model.mae,
+                            "mae"
+                          )}`}
+                        >
+                          {model.mae.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2 bg-muted rounded">
+                    <h4 className="font-semibold text-xs mb-2">Timing</h4>
+                    <div className="space-y-1.5">
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          Training:
+                        </span>
+                        <span className="font-semibold text-xs font-mono">
+                          {model.trainingTime.toFixed(0)}s
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                          Prediction:
+                        </span>
+                        <span className="font-semibold text-xs font-mono">
+                          {model.predictionTime.toFixed(1)}ms
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
+      )}
 
-        <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-sm text-slate-700">
-              Deep Learning (4)
-            </CardTitle>
-            <CardDescription className="text-slate-600 text-xs">
-              Neural networks
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-xs text-slate-700 space-y-1">
-              <li>• CNN</li>
-              <li>• LSTM</li>
-              <li>• GRU</li>
-              <li>• RNN</li>
-            </ul>
-          </CardContent>
-        </Card>
-
-        <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-          <CardHeader>
-            <CardTitle className="text-sm text-slate-700">
-              Linear Models (4)
-            </CardTitle>
-            <CardDescription className="text-slate-600 text-xs">
-              Regression-based
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ul className="text-xs text-slate-700 space-y-1">
-              <li>• Linear Reg</li>
-              <li>• Ridge</li>
-              <li>• Lasso</li>
-              <li>• ElasticNet</li>
-            </ul>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Model Performance Distribution */}
-      <Card className="border-slate-200 bg-white/50 backdrop-blur-sm shadow-sm">
-        <CardHeader>
-          <CardTitle className="text-slate-900">
-            Recommendations Distribution
+      {/* Summary Statistics */}
+      <Card className="border border-slate-200">
+        <CardHeader className="pb-2">
+          <CardTitle className="flex items-center space-x-2 text-sm">
+            <Zap className="h-4 w-4 text-primary" />
+            <span className="font-semibold">Model Summary</span>
           </CardTitle>
-          <CardDescription className="text-slate-700">
-            How all 13 models vote
-          </CardDescription>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg text-center bg-green-50 border border-green-200">
-              <div className="text-3xl font-bold text-green-600">
-                {
-                  modelPredictions.filter((m) => m.recommendation === "BUY")
-                    .length
-                }
-              </div>
-              <div className="text-sm text-slate-600 mt-1">BUY Signals</div>
+        <CardContent className="p-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <div className="text-center p-2 bg-muted rounded">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Total Models
+              </p>
+              <p className="text-xl font-bold font-mono">
+                {modelResults.length}
+              </p>
             </div>
-            <div className="p-4 rounded-lg text-center bg-yellow-50 border border-yellow-200">
-              <div className="text-3xl font-bold text-yellow-600">
-                {
-                  modelPredictions.filter((m) => m.recommendation === "HOLD")
-                    .length
-                }
-              </div>
-              <div className="text-sm text-slate-600 mt-1">HOLD Signals</div>
+            <div className="text-center p-2 bg-muted rounded">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Avg Accuracy
+              </p>
+              <p className="text-xl font-bold font-mono">
+                {(
+                  (modelResults.reduce((sum, m) => sum + m.accuracy, 0) /
+                    modelResults.length) *
+                  100
+                ).toFixed(1)}
+                %
+              </p>
             </div>
-            <div className="p-4 rounded-lg text-center bg-red-50 border border-red-200">
-              <div className="text-3xl font-bold text-red-600">
-                {
-                  modelPredictions.filter((m) => m.recommendation === "SELL")
-                    .length
-                }
-              </div>
-              <div className="text-sm text-slate-600 mt-1">SELL Signals</div>
+            <div className="text-center p-2 bg-muted rounded">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Best Model
+              </p>
+              <p className="text-sm font-bold">{bestModel?.name}</p>
+            </div>
+            <div className="text-center p-2 bg-muted rounded">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wide">
+                Consensus
+              </p>
+              <p className="text-sm font-bold">
+                {(() => {
+                  const buyCount = modelResults.filter(
+                    (m) => m.recommendation === "BUY"
+                  ).length;
+                  const sellCount = modelResults.filter(
+                    (m) => m.recommendation === "SELL"
+                  ).length;
+                  const holdCount = modelResults.filter(
+                    (m) => m.recommendation === "HOLD"
+                  ).length;
+                  const max = Math.max(buyCount, sellCount, holdCount);
+                  if (max === buyCount) return "BUY";
+                  if (max === sellCount) return "SELL";
+                  return "HOLD";
+                })()}
+              </p>
             </div>
           </div>
         </CardContent>

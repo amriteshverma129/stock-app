@@ -1,467 +1,472 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { formatPercent, cn } from "@/lib/utils";
-import {
-  RefreshCw,
-  Grid3x3,
-  ScatterChart,
   TrendingUp,
   TrendingDown,
-  Activity,
   BarChart3,
+  RefreshCw,
+  Activity,
+  AlertTriangle,
+  Search,
+  X,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { MarketScatterChart } from "@/components/charts/MarketScatterChart";
-import { SectorPerformanceChart } from "@/components/charts/SectorPerformanceChart";
-import { ChartLoader } from "./LoadingScreen";
+import { FINANCIAL_STOCKS, SECTOR_PERFORMANCE } from "@/data/financial-data";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-interface StockHeatmapData {
+interface HeatmapData {
   symbol: string;
   name: string;
-  sector: string;
   price: number;
   change: number;
   changePercent: number;
   volume: number;
   marketCap: number;
+  sector: string;
 }
 
 interface SectorData {
   name: string;
-  count: number;
-  avgChange: number;
-  stocks: StockHeatmapData[];
+  change: number;
+  changePercent: number;
+  marketCap: number;
+  stockCount: number;
+  topStocks: string[];
 }
 
 export function MarketHeatmap() {
-  const [heatmapData, setHeatmapData] = useState<StockHeatmapData[]>([]);
-  const [sectorData, setSectorData] = useState<SectorData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<string>("");
-  const [selectedStock, setSelectedStock] = useState<StockHeatmapData | null>(
-    null
-  );
+  const [heatmapData, setHeatmapData] = useState<HeatmapData[]>([]);
+  const [sectorData, setSectorData] = useState<SectorData[]>([]);
+  const [selectedSector, setSelectedSector] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    fetchHeatmap();
-    const interval = setInterval(fetchHeatmap, 60000);
-    return () => clearInterval(interval);
+    const fetchData = async () => {
+      setLoading(true);
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const stocks = FINANCIAL_STOCKS.map((stock) => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        change: stock.change,
+        changePercent: stock.changePercent,
+        volume: stock.volume,
+        marketCap: stock.marketCap,
+        sector: stock.sector,
+      }));
+
+      setHeatmapData(stocks);
+      setSectorData(SECTOR_PERFORMANCE);
+      setLoading(false);
+    };
+
+    fetchData();
   }, []);
 
-  const fetchHeatmap = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/market/heatmap`);
-      setHeatmapData(response.data.stocks);
-      setSectorData(response.data.sectors);
-      setLastUpdate(new Date().toLocaleTimeString());
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching heatmap:", error);
-      setLoading(false);
-    }
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
   };
 
-  const getColorClasses = (changePercent: number) => {
-    if (changePercent > 3)
-      return "from-green-600 to-green-700 text-white shadow-green-500/50";
-    if (changePercent > 1)
-      return "from-green-500 to-green-600 text-white shadow-green-400/40";
-    if (changePercent > 0)
-      return "from-green-400 to-green-500 text-white shadow-green-300/30";
-    if (changePercent > -1)
-      return "from-red-400 to-red-500 text-white shadow-red-300/30";
-    if (changePercent > -3)
-      return "from-red-500 to-red-600 text-white shadow-red-400/40";
-    return "from-red-600 to-red-700 text-white shadow-red-500/50";
+  const formatNumber = (value: number) => {
+    if (value >= 1e7) return `₹${(value / 1e7).toFixed(2)}Cr`;
+    if (value >= 1e5) return `₹${(value / 1e5).toFixed(2)}L`;
+    if (value >= 1e3) return `₹${(value / 1e3).toFixed(1)}K`;
+    return value.toString();
   };
 
-  const getSectorGradient = (avgChange: number) => {
-    if (avgChange > 2)
-      return "from-green-500/10 via-green-400/5 to-transparent";
-    if (avgChange > 0) return "from-green-400/5 via-green-300/5 to-transparent";
-    if (avgChange > -2) return "from-red-400/5 via-red-300/5 to-transparent";
-    return "from-red-500/10 via-red-400/5 to-transparent";
+  const getChangeColor = (change: number) => {
+    if (change > 0) return "text-green-600";
+    if (change < 0) return "text-red-600";
+    return "text-muted-foreground";
   };
 
-  const getSectorBorderColor = (avgChange: number) => {
-    if (avgChange > 2) return "border-green-500/30";
-    if (avgChange > 0) return "border-green-400/20";
-    if (avgChange > -2) return "border-red-400/20";
-    return "border-red-500/30";
+  const getChangeIcon = (change: number) => {
+    if (change > 0) return <TrendingUp className="h-4 w-4" />;
+    if (change < 0) return <TrendingDown className="h-4 w-4" />;
+    return null;
   };
 
-  const totalVolume = !loading
-    ? heatmapData.reduce((sum, s) => sum + s.volume, 0)
-    : 0;
-  const advancers = !loading
-    ? heatmapData.filter((s) => s.changePercent > 0).length
-    : 0;
-  const decliners = !loading
-    ? heatmapData.filter((s) => s.changePercent < 0).length
-    : 0;
+  const getIntensityClass = (changePercent: number) => {
+    const absChange = Math.abs(changePercent);
+    if (absChange >= 5)
+      return changePercent > 0 ? "bg-green-500" : "bg-red-500";
+    if (absChange >= 3)
+      return changePercent > 0 ? "bg-green-400" : "bg-red-400";
+    if (absChange >= 1)
+      return changePercent > 0 ? "bg-green-300" : "bg-red-300";
+    if (absChange >= 0.5)
+      return changePercent > 0 ? "bg-green-200" : "bg-red-200";
+    return changePercent > 0 ? "bg-green-100" : "bg-red-100";
+  };
+
+  const filteredStocks = heatmapData.filter((stock) => {
+    const matchesSector = selectedSector
+      ? stock.sector === selectedSector
+      : true;
+    const matchesSearch = searchTerm
+      ? stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        stock.name.toLowerCase().includes(searchTerm.toLowerCase())
+      : true;
+    return matchesSector && matchesSearch;
+  });
+
+  const totalVolume =
+    !loading && heatmapData
+      ? heatmapData.reduce((sum, stock) => sum + stock.volume, 0)
+      : 0;
+  const advancers =
+    !loading && heatmapData
+      ? heatmapData.filter((stock) => stock.change > 0).length
+      : 0;
+  const decliners =
+    !loading && heatmapData
+      ? heatmapData.filter((stock) => stock.change < 0).length
+      : 0;
   const avgChange =
-    !loading && heatmapData.length > 0
-      ? heatmapData.reduce((sum, s) => sum + s.changePercent, 0) /
+    !loading && heatmapData && heatmapData.length > 0
+      ? heatmapData.reduce((sum, stock) => sum + stock.changePercent, 0) /
         heatmapData.length
       : 0;
 
-  return (
-    <div className="space-y-6">
-      {/* Enhanced Header */}
-      <Card className="border-0 shadow-2xl bg-gradient-to-br from-slate-900 via-blue-900 to-purple-900 text-white overflow-hidden">
-        <div className="absolute inset-0 bg-grid-white/5 pointer-events-none"></div>
-        <CardHeader className="relative z-10">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="p-4 bg-white/10 backdrop-blur-sm rounded-2xl">
-                <BarChart3 className="h-8 w-8 text-white" />
-              </div>
-              <div>
-                <CardTitle className="text-3xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
-                  Live Market Overview
-                </CardTitle>
-                <CardDescription className="text-blue-200 text-base mt-1">
-                  Real-time heatmap • {lastUpdate && `Updated ${lastUpdate}`}
-                </CardDescription>
-              </div>
-            </div>
-            <Button
-              size="lg"
-              variant="secondary"
-              onClick={fetchHeatmap}
-              disabled={loading}
-              className="bg-white/20 hover:bg-white/30 backdrop-blur-sm border-white/20 text-white"
-            >
-              <RefreshCw
-                className={`h-5 w-5 mr-2 ${loading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </Button>
-          </div>
+  if (loading) {
+    return (
+      <Card>
+        <CardContent className="p-8 text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <h3 className="text-sm font-semibold mb-2">Loading Market Data</h3>
+          <p className="text-xs text-muted-foreground">
+            Fetching real-time information...
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
 
-          {/* Market Stats */}
-          {!loading && heatmapData.length > 0 && (
-            <div className="grid grid-cols-4 gap-4 mt-6">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                <div className="text-blue-200 text-sm font-medium mb-1">
-                  Total Stocks
-                </div>
-                <div className="text-3xl font-bold">{heatmapData.length}</div>
-              </div>
-              <div className="bg-green-500/20 backdrop-blur-sm rounded-xl p-4 border border-green-400/30">
-                <div className="text-green-200 text-sm font-medium mb-1 flex items-center gap-1">
-                  <TrendingUp className="h-4 w-4" />
-                  Advancing
-                </div>
-                <div className="text-3xl font-bold text-green-100">
-                  {advancers}
-                </div>
-                <div className="text-xs text-green-200 mt-1">
-                  {((advancers / heatmapData.length) * 100).toFixed(0)}%
-                </div>
-              </div>
-              <div className="bg-red-500/20 backdrop-blur-sm rounded-xl p-4 border border-red-400/30">
-                <div className="text-red-200 text-sm font-medium mb-1 flex items-center gap-1">
-                  <TrendingDown className="h-4 w-4" />
-                  Declining
-                </div>
-                <div className="text-3xl font-bold text-red-100">
-                  {decliners}
-                </div>
-                <div className="text-xs text-red-200 mt-1">
-                  {((decliners / heatmapData.length) * 100).toFixed(0)}%
-                </div>
-              </div>
-              <div
-                className={cn(
-                  "backdrop-blur-sm rounded-xl p-4 border",
-                  avgChange >= 0
-                    ? "bg-green-500/20 border-green-400/30"
-                    : "bg-red-500/20 border-red-400/30"
-                )}
-              >
-                <div
-                  className={cn(
-                    "text-sm font-medium mb-1",
-                    avgChange >= 0 ? "text-green-200" : "text-red-200"
-                  )}
-                >
-                  Market Sentiment
-                </div>
-                <div
-                  className={cn(
-                    "text-3xl font-bold",
-                    avgChange >= 0 ? "text-green-100" : "text-red-100"
-                  )}
-                >
-                  {formatPercent(avgChange)}
-                </div>
+  return (
+    <div className="space-y-3">
+      {/* Market Overview */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-all">
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-500/5 to-transparent"></div>
+          <CardContent className="p-3 relative">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                Total Volume
+              </span>
+              <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center">
+                <BarChart3 className="h-3 w-3 text-slate-600" />
               </div>
             </div>
-          )}
+            <div className="text-xl font-bold font-mono">
+              {formatNumber(totalVolume)}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">
+              Market Activity
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-all">
+          <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent"></div>
+          <CardContent className="p-3 relative">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                Advancing
+              </span>
+              <div className="w-6 h-6 rounded bg-emerald-100 flex items-center justify-center">
+                <TrendingUp className="h-3 w-3 text-emerald-600" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-emerald-600 font-mono">
+              {advancers}
+            </div>
+            <p className="text-[10px] text-emerald-600 mt-0.5 uppercase tracking-wide font-semibold">
+              Stocks Up
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-all">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/5 to-transparent"></div>
+          <CardContent className="p-3 relative">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                Declining
+              </span>
+              <div className="w-6 h-6 rounded bg-red-100 flex items-center justify-center">
+                <TrendingDown className="h-3 w-3 text-red-600" />
+              </div>
+            </div>
+            <div className="text-xl font-bold text-red-600 font-mono">
+              {decliners}
+            </div>
+            <p className="text-[10px] text-red-600 mt-0.5 uppercase tracking-wide font-semibold">
+              Stocks Down
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden border-0 shadow-sm hover:shadow-md transition-all">
+          <div
+            className={`absolute inset-0 ${
+              avgChange > 0
+                ? "bg-gradient-to-br from-blue-500/5 to-transparent"
+                : "bg-gradient-to-br from-orange-500/5 to-transparent"
+            }`}
+          ></div>
+          <CardContent className="p-3 relative">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                Avg Change
+              </span>
+              <div
+                className={`w-6 h-6 rounded flex items-center justify-center ${
+                  avgChange > 0 ? "bg-blue-100" : "bg-orange-100"
+                }`}
+              >
+                <Activity
+                  className={`h-3 w-3 ${
+                    avgChange > 0 ? "text-blue-600" : "text-orange-600"
+                  }`}
+                />
+              </div>
+            </div>
+            <div
+              className={`text-xl font-bold font-mono ${
+                avgChange > 0
+                  ? "text-blue-600"
+                  : avgChange < 0
+                  ? "text-orange-600"
+                  : "text-slate-600"
+              }`}
+            >
+              {avgChange > 0 ? "+" : ""}
+              {avgChange.toFixed(2)}%
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5 uppercase tracking-wide">
+              Market Sentiment
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Sector Performance */}
+      <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300">
+        <CardHeader className="pb-3 bg-gradient-to-r from-slate-50/50 to-transparent">
+          <CardTitle className="flex items-center justify-between text-sm">
+            <span className="font-semibold">Sector Performance</span>
+            <Button
+              variant={!selectedSector ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs shadow-sm"
+              onClick={() => setSelectedSector(null)}
+            >
+              All Sectors
+            </Button>
+          </CardTitle>
         </CardHeader>
+        <CardContent className="p-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2">
+            {sectorData && sectorData.length > 0 ? (
+              sectorData.map((sector) => (
+                <button
+                  key={sector.name}
+                  className={`p-3 rounded-lg border transition-all text-left ${
+                    selectedSector === sector.name
+                      ? "bg-primary text-primary-foreground border-primary shadow-md hover:shadow-lg"
+                      : "bg-card hover:bg-muted border-border hover:border-primary/50 shadow-sm hover:shadow-md"
+                  }`}
+                  onClick={() =>
+                    setSelectedSector(
+                      selectedSector === sector.name ? null : sector.name
+                    )
+                  }
+                >
+                  <div className="space-y-1">
+                    <p
+                      className={`text-xs font-semibold ${
+                        selectedSector === sector.name ? "" : ""
+                      }`}
+                    >
+                      {sector.name}
+                    </p>
+                    <div
+                      className={`flex items-center space-x-1 text-xs font-mono ${
+                        selectedSector === sector.name
+                          ? "text-primary-foreground"
+                          : getChangeColor(sector.change)
+                      }`}
+                    >
+                      {getChangeIcon(sector.change)}
+                      <span>
+                        {sector.change > 0 ? "+" : ""}
+                        {sector.changePercent.toFixed(2)}%
+                      </span>
+                    </div>
+                    <p
+                      className={`text-[10px] ${
+                        selectedSector === sector.name
+                          ? "text-primary-foreground/70"
+                          : "text-muted-foreground"
+                      }`}
+                    >
+                      {sector.stockCount} stocks
+                    </p>
+                  </div>
+                </button>
+              ))
+            ) : (
+              <div className="col-span-full text-center py-8">
+                <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">
+                  No sector data available
+                </p>
+              </div>
+            )}
+          </div>
+        </CardContent>
       </Card>
 
-      {/* View Tabs */}
-      <Tabs defaultValue="grid" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md h-12 bg-white/80 border border-slate-200 p-1 shadow-sm">
-          <TabsTrigger
-            value="grid"
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
-          >
-            <Grid3x3 className="h-4 w-4" />
-            Grid View
-          </TabsTrigger>
-          <TabsTrigger
-            value="chart"
-            className="flex items-center gap-2 data-[state=active]:bg-gradient-to-br data-[state=active]:from-blue-500 data-[state=active]:to-purple-600 data-[state=active]:text-white data-[state=active]:shadow-md transition-all"
-          >
-            <ScatterChart className="h-4 w-4" />
-            Chart View
-          </TabsTrigger>
-        </TabsList>
-
-        {/* Enhanced Grid View */}
-        <TabsContent value="grid" className="space-y-6 mt-6">
-          {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <ChartLoader />
-            </div>
-          ) : (
-            <>
-              {sectorData.map((sector) => (
-                <Card
-                  key={sector.name}
-                  className={cn(
-                    "border-2 shadow-xl transition-all duration-300 hover:shadow-2xl overflow-hidden",
-                    "bg-gradient-to-br",
-                    getSectorGradient(sector.avgChange),
-                    getSectorBorderColor(sector.avgChange)
-                  )}
+      {/* Stock Heatmap */}
+      <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300">
+        <CardHeader className="pb-3 bg-gradient-to-r from-slate-50/50 to-transparent">
+          <CardTitle className="flex items-center justify-between text-sm">
+            <div className="flex items-center space-x-2">
+              <span className="font-semibold">Stock Heatmap</span>
+              {selectedSector && (
+                <Badge variant="secondary" className="text-[10px] font-mono">
+                  {selectedSector}
+                </Badge>
+              )}
+              {searchTerm && (
+                <Badge
+                  variant="outline"
+                  className="flex items-center gap-1 text-[10px]"
                 >
-                  <CardHeader className="pb-4 bg-gradient-to-r from-slate-50/50 to-transparent dark:from-slate-900/50">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={cn(
-                            "p-3 rounded-xl",
-                            sector.avgChange >= 0
-                              ? "bg-gradient-to-br from-green-500 to-green-600"
-                              : "bg-gradient-to-br from-red-500 to-red-600"
-                          )}
-                        >
-                          <Activity className="h-5 w-5 text-white" />
-                        </div>
-                        <div>
-                          <CardTitle className="text-2xl font-bold">
-                            {sector.name}
-                          </CardTitle>
-                          <CardDescription className="text-sm mt-1">
-                            {sector.count} stocks tracked
-                          </CardDescription>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div
-                          className={cn(
-                            "text-3xl font-bold",
-                            sector.avgChange >= 0
-                              ? "text-green-600 dark:text-green-400"
-                              : "text-red-600 dark:text-red-400"
-                          )}
-                        >
-                          {formatPercent(sector.avgChange)}
-                        </div>
-                        <div className="text-xs text-muted-foreground mt-1">
-                          Sector Average
-                        </div>
-                      </div>
+                  "{searchTerm}"
+                  <X
+                    className="h-2.5 w-2.5 cursor-pointer hover:text-destructive"
+                    onClick={() => setSearchTerm("")}
+                  />
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="Search stocks..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9 w-48 h-8 text-xs"
+                />
+              </div>
+              <Button variant="outline" size="sm" className="h-7 text-xs">
+                <RefreshCw className="h-3 w-3 mr-1.5" />
+                Refresh
+              </Button>
+              <Badge variant="outline" className="text-[10px] font-mono">
+                {filteredStocks.length} stocks
+              </Badge>
+            </div>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {filteredStocks.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-2">
+              {filteredStocks.map((stock) => (
+                <div
+                  key={stock.symbol}
+                  className="group relative overflow-hidden rounded-lg border-0 bg-card shadow-sm hover:shadow-lg transition-all duration-200 cursor-pointer hover:scale-[1.02]"
+                >
+                  <div
+                    className={`absolute inset-0 ${
+                      stock.change > 0
+                        ? "bg-gradient-to-br from-emerald-500/5 to-transparent"
+                        : stock.change < 0
+                        ? "bg-gradient-to-br from-red-500/5 to-transparent"
+                        : "bg-gradient-to-br from-slate-500/5 to-transparent"
+                    }`}
+                  ></div>
+                  <div
+                    className={`absolute top-0 left-0 right-0 h-0.5 ${
+                      stock.change > 0
+                        ? "bg-gradient-to-r from-emerald-500 to-green-500"
+                        : stock.change < 0
+                        ? "bg-gradient-to-r from-red-500 to-rose-500"
+                        : "bg-gradient-to-r from-slate-400 to-slate-500"
+                    }`}
+                  ></div>
+
+                  <div className="p-2.5 relative">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="font-semibold text-xs truncate">
+                        {stock.symbol}
+                      </span>
+                      <div
+                        className={`w-1.5 h-1.5 rounded-full ${getIntensityClass(
+                          stock.changePercent
+                        )}`}
+                      ></div>
                     </div>
-                  </CardHeader>
-                  <CardContent className="pt-4">
-                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-                      {sector.stocks.map((stock) => (
-                        <div
-                          key={stock.symbol}
-                          onClick={() => setSelectedStock(stock)}
-                          className={cn(
-                            "group relative p-4 rounded-xl cursor-pointer transition-all duration-300",
-                            "bg-gradient-to-br shadow-lg hover:shadow-2xl hover:scale-105",
-                            "border border-white/20",
-                            getColorClasses(stock.changePercent)
-                          )}
-                        >
-                          {/* Shine effect */}
-                          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-
-                          <div className="relative z-10">
-                            <div className="font-bold text-base mb-1">
-                              {stock.symbol}
-                            </div>
-                            <div className="text-sm opacity-90 mb-2">
-                              ₹{stock.price.toFixed(2)}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              {stock.changePercent > 0 ? (
-                                <TrendingUp className="h-3 w-3" />
-                              ) : (
-                                <TrendingDown className="h-3 w-3" />
-                              )}
-                              <span className="text-sm font-bold">
-                                {formatPercent(stock.changePercent)}
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* Tooltip */}
-                          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-800 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-20 shadow-xl">
-                            <div className="font-semibold">{stock.name}</div>
-                            <div className="mt-1">
-                              Volume: {(stock.volume / 1000000).toFixed(2)}M
-                            </div>
-                            <div className="mt-1">
-                              MCap: ₹{(stock.marketCap / 10000000).toFixed(0)}Cr
-                            </div>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900"></div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-
-              {/* Enhanced Legend */}
-              <Card className="border-0 shadow-xl bg-gradient-to-br from-slate-50 to-white dark:from-slate-900 dark:to-slate-800">
-                <CardContent className="pt-6">
-                  <div className="flex items-center justify-center gap-6 flex-wrap text-sm">
-                    <span className="text-muted-foreground font-semibold">
-                      Performance Scale:
-                    </span>
-                    {[
-                      { label: "> +3%", color: "from-green-600 to-green-700" },
-                      {
-                        label: "+1 to +3%",
-                        color: "from-green-500 to-green-600",
-                      },
-                      {
-                        label: "0 to +1%",
-                        color: "from-green-400 to-green-500",
-                      },
-                      { label: "0 to -1%", color: "from-red-400 to-red-500" },
-                      { label: "-1 to -3%", color: "from-red-500 to-red-600" },
-                      { label: "< -3%", color: "from-red-600 to-red-700" },
-                    ].map((item, idx) => (
-                      <div key={idx} className="flex items-center gap-2">
-                        <div
-                          className={cn(
-                            "w-6 h-6 rounded-md shadow-md bg-gradient-to-br",
-                            item.color
-                          )}
-                        ></div>
-                        <span className="text-xs font-medium">
-                          {item.label}
+                    <div className="space-y-1">
+                      <p className="text-sm font-bold font-mono">
+                        {formatCurrency(stock.price)}
+                      </p>
+                      <div
+                        className={`flex items-center space-x-1 text-[11px] font-mono font-semibold ${getChangeColor(
+                          stock.change
+                        )}`}
+                      >
+                        {getChangeIcon(stock.change)}
+                        <span>
+                          {stock.change > 0 ? "+" : ""}
+                          {stock.changePercent.toFixed(2)}%
                         </span>
                       </div>
-                    ))}
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+                        <span>Vol: {formatNumber(stock.volume)}</span>
+                      </div>
+                    </div>
                   </div>
-                </CardContent>
-              </Card>
-            </>
-          )}
-        </TabsContent>
-
-        {/* Chart View */}
-        <TabsContent value="chart" className="space-y-6 mt-6">
-          {loading ? (
-            <div className="h-full flex items-center justify-center">
-              <ChartLoader />
+                </div>
+              ))}
             </div>
           ) : (
-            <>
-              <MarketScatterChart stocks={heatmapData} sectors={sectorData} />
-              <SectorPerformanceChart sectors={sectorData} />
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Stock Detail Modal (if selected) */}
-      {selectedStock && (
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-          onClick={() => setSelectedStock(null)}
-        >
-          <Card
-            className="max-w-md w-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <CardHeader className="bg-gradient-to-br from-blue-500 to-purple-600 text-white">
-              <CardTitle className="text-2xl">{selectedStock.symbol}</CardTitle>
-              <CardDescription className="text-blue-100">
-                {selectedStock.name}
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pt-6">
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Current Price</span>
-                  <span className="text-2xl font-bold">
-                    ₹{selectedStock.price.toFixed(2)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Change</span>
-                  <span
-                    className={cn(
-                      "text-xl font-bold",
-                      selectedStock.changePercent >= 0
-                        ? "text-green-600"
-                        : "text-red-600"
-                    )}
-                  >
-                    {formatPercent(selectedStock.changePercent)}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Volume</span>
-                  <span className="font-semibold">
-                    {(selectedStock.volume / 1000000).toFixed(2)}M
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Market Cap</span>
-                  <span className="font-semibold">
-                    ₹{(selectedStock.marketCap / 10000000).toFixed(0)} Cr
-                  </span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Sector</span>
-                  <span className="font-semibold">{selectedStock.sector}</span>
-                </div>
-              </div>
+            <div className="text-center py-12">
+              <Search className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <h3 className="text-lg font-semibold mb-2">No stocks found</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                {searchTerm
+                  ? `No results for "${searchTerm}"${
+                      selectedSector ? ` in ${selectedSector}` : ""
+                    }`
+                  : `No stocks in ${selectedSector}`}
+              </p>
               <Button
-                className="w-full mt-6"
-                onClick={() => setSelectedStock(null)}
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setSearchTerm("");
+                  setSelectedSector(null);
+                }}
               >
-                Close
+                Clear filters
               </Button>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

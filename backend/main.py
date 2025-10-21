@@ -14,10 +14,10 @@ from pydantic import BaseModel
 
 from ml_models import StockMLModels
 from data_processor import DataProcessor
-from live_data_fetcher import LiveDataFetcher
+from static_data_provider import StaticDataProvider
 from advanced_ml_models import MultiTimeframePredictor
-from multi_source_fetcher import MultiSourceFetcher
 from cnn_models import CNNStockPredictor
+from indian_stocks_data import get_cached_stocks, get_cached_sectors, generate_historical_data
 
 app = FastAPI(title="Stock Market Data Science API")
 
@@ -33,9 +33,8 @@ app.add_middleware(
 # Initialize processors
 data_processor = DataProcessor(data_folder='../data')
 ml_models = StockMLModels()
-live_fetcher = LiveDataFetcher()
+static_provider = StaticDataProvider()
 timeframe_predictor = MultiTimeframePredictor()
-multi_source = MultiSourceFetcher()
 cnn_predictor = CNNStockPredictor()
 
 # Response models
@@ -82,6 +81,26 @@ class FeatureImportance(BaseModel):
     feature: str
     importance: float
 
+class PortfolioPosition(BaseModel):
+    symbol: str
+    quantity: float
+    avgPrice: float
+    purchaseDate: Optional[str] = None
+
+class PortfolioCalculation(BaseModel):
+    symbol: str
+    name: str
+    quantity: float
+    avgPrice: float
+    currentPrice: float
+    marketValue: float
+    costBasis: float
+    gain: float
+    gainPercent: float
+    weight: float
+    purchaseDate: Optional[str] = None
+    holdingDays: Optional[int] = None
+
 class StockAnalysis(BaseModel):
     stockInfo: StockInfo
     priceHistory: List[PricePoint]
@@ -114,20 +133,22 @@ async def root():
 async def get_stocks(category: str = "Nifty50", limit: int = 10):
     """Get list of available stocks"""
     try:
-        stocks = data_processor.load_stocks(category, limit)
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
+        
+        stocks = static_provider.get_stock_list()[:limit]
         
         stock_list = []
-        for symbol, data in stocks.items():
-            latest = data[-1] if data else {}
+        for stock in stocks:
             stock_list.append({
-                "symbol": symbol,
-                "name": symbol.replace("-", " ").title(),
-                "currentPrice": latest.get("close", 0),
-                "change": latest.get("close", 0) - latest.get("open", 0),
-                "changePercent": ((latest.get("close", 0) - latest.get("open", 0)) / latest.get("open", 1)) * 100,
-                "marketCap": latest.get("marketCap"),
-                "peRatio": latest.get("peRatio"),
-                "volume": latest.get("volume")
+                "symbol": stock["symbol"],
+                "name": stock["name"],
+                "currentPrice": stock["current_price"],
+                "change": stock["change"],
+                "changePercent": stock["change_percent"],
+                "marketCap": None,  # Will be added from detailed info if needed
+                "peRatio": None,    # Will be added from detailed info if needed
+                "volume": stock["volume"]
             })
         
         return {"stocks": stock_list, "count": len(stock_list)}
@@ -139,13 +160,20 @@ async def get_stocks(category: str = "Nifty50", limit: int = 10):
 async def get_stock_details(symbol: str, days: int = 365):
     """Get detailed stock information"""
     try:
-        stock_data = data_processor.get_stock_data(symbol)
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
         
-        if not stock_data:
+        # Get stock info
+        stock_info = static_provider.get_stock_info(symbol)
+        if not stock_info:
             raise HTTPException(status_code=404, detail=f"Stock {symbol} not found")
         
-        # Get price history
-        df = data_processor.process_stock_data(symbol, stock_data)
+        # Get historical data
+        period = '1y' if days >= 365 else '6mo' if days >= 180 else '1mo'
+        df = static_provider.get_stock_data(symbol, period)
+        
+        if df is None or df.empty:
+            raise HTTPException(status_code=404, detail=f"No historical data for {symbol}")
         
         # Limit to requested days
         df = df.tail(days)
@@ -162,22 +190,17 @@ async def get_stock_details(symbol: str, days: int = 365):
                 "volume": int(row["Volume"])
             })
         
-        # Get latest data
-        latest = stock_data[-1] if stock_data else {}
-        
-        stock_info = {
-            "symbol": symbol,
-            "name": symbol.replace("-", " ").title(),
-            "currentPrice": float(df["Close"].iloc[-1]),
-            "change": float(df["Close"].iloc[-1] - df["Close"].iloc[-2]),
-            "changePercent": float(((df["Close"].iloc[-1] - df["Close"].iloc[-2]) / df["Close"].iloc[-2]) * 100),
-            "marketCap": latest.get("marketCap"),
-            "peRatio": latest.get("peRatio"),
-            "volume": int(df["Volume"].iloc[-1])
-        }
-        
         return {
-            "stockInfo": stock_info,
+            "stockInfo": {
+                "symbol": stock_info["symbol"],
+                "name": stock_info["name"],
+                "currentPrice": stock_info["current_price"],
+                "change": stock_info["change"],
+                "changePercent": stock_info["change_percent"],
+                "marketCap": stock_info["market_cap"],
+                "peRatio": stock_info["pe_ratio"],
+                "volume": stock_info["volume"]
+            },
             "priceHistory": price_history
         }
     except Exception as e:
@@ -393,7 +416,10 @@ async def compare_models(symbol: str):
 async def get_live_stocks():
     """Get list of all available Indian stocks"""
     try:
-        stocks = multi_source.get_all_stocks()
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
+        
+        stocks = static_provider.get_stock_list()
         return {"stocks": stocks, "count": len(stocks)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -403,7 +429,10 @@ async def get_live_stocks():
 async def get_market_heatmap():
     """Get market heatmap data - all stocks with current performance"""
     try:
-        heatmap_data = multi_source.get_market_heatmap()
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
+        
+        heatmap_data = static_provider.get_market_heatmap_data()
         return heatmap_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -413,8 +442,12 @@ async def get_market_heatmap():
 async def get_market_breadth():
     """Get market breadth statistics - advance/decline ratio, volume, etc."""
     try:
-        breadth_data = multi_source.get_market_breadth()
-        return breadth_data
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
+        
+        # Get market overview data
+        market_data = static_provider.get_market_overview()
+        return market_data
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -422,21 +455,25 @@ async def get_market_breadth():
 @app.get("/live/stocks/{symbol}")
 async def get_live_stock_data(symbol: str, period: str = "1y"):
     """
-    Get live stock data from multiple sources
+    Get live stock data from static data source
     
     Args:
         symbol: Stock symbol (e.g., RELIANCE, TCS)
         period: Time period (1mo, 6mo, 1y, 5y)
     """
     try:
-        # Fetch live data (multi-source with fallback)
-        df = multi_source.fetch_stock_data(symbol, period)
-        
-        if df is None or df.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
         
         # Get stock info
-        stock_info = multi_source.get_stock_info(symbol)
+        stock_info = static_provider.get_stock_info(symbol)
+        if not stock_info:
+            raise HTTPException(status_code=404, detail=f"Stock {symbol} not found")
+        
+        # Get historical data
+        df = static_provider.get_stock_data(symbol, period)
+        if df is None or df.empty:
+            raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
         
         # Convert DataFrame to price history
         price_history = []
@@ -483,8 +520,11 @@ async def predict_live_stock(symbol: str, timeframe: str = "1M"):
             '5Y': 'max'    # Get all available data for 5-year prediction
         }
         
-        # Fetch live data (multi-source)
-        df = multi_source.fetch_stock_data(symbol, period_map[timeframe])
+        # Get static data
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
+        
+        df = static_provider.get_stock_data(symbol, period_map[timeframe])
         
         if df is None or df.empty:
             raise HTTPException(status_code=404, detail=f"No data found for {symbol}")
@@ -728,6 +768,151 @@ async def compare_all_models(symbol: str, timeframe: str = "1M"):
     
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/portfolio/calculate")
+async def calculate_portfolio(positions: List[PortfolioPosition]):
+    """
+    Calculate portfolio metrics for given positions
+    
+    Args:
+        positions: List of portfolio positions with symbol, quantity, avgPrice, and optional purchaseDate
+    
+    Returns:
+        Detailed portfolio calculations including current values, gains, and weights
+    """
+    try:
+        if not static_provider.is_available():
+            raise HTTPException(status_code=503, detail="Static data not available")
+        
+        calculated_positions = []
+        total_market_value = 0
+        total_cost_basis = 0
+        
+        # First pass: calculate individual positions
+        for position in positions:
+            # Get current stock price
+            stock_info = static_provider.get_stock_info(position.symbol)
+            if not stock_info:
+                continue
+            
+            current_price = stock_info["current_price"]
+            cost_basis = position.quantity * position.avgPrice
+            market_value = position.quantity * current_price
+            gain = market_value - cost_basis
+            gain_percent = (gain / cost_basis * 100) if cost_basis > 0 else 0
+            
+            # Calculate holding days if purchase date provided
+            holding_days = None
+            if position.purchaseDate:
+                try:
+                    purchase_date = datetime.fromisoformat(position.purchaseDate.replace('Z', '+00:00'))
+                    holding_days = (datetime.now() - purchase_date).days
+                except:
+                    holding_days = None
+            
+            calculated_positions.append({
+                "symbol": position.symbol,
+                "name": stock_info["name"],
+                "quantity": position.quantity,
+                "avgPrice": position.avgPrice,
+                "currentPrice": current_price,
+                "marketValue": market_value,
+                "costBasis": cost_basis,
+                "gain": gain,
+                "gainPercent": gain_percent,
+                "weight": 0,  # Will be calculated in second pass
+                "purchaseDate": position.purchaseDate,
+                "holdingDays": holding_days
+            })
+            
+            total_market_value += market_value
+            total_cost_basis += cost_basis
+        
+        # Second pass: calculate weights
+        for pos in calculated_positions:
+            pos["weight"] = (pos["marketValue"] / total_market_value * 100) if total_market_value > 0 else 0
+        
+        total_gain = total_market_value - total_cost_basis
+        total_gain_percent = (total_gain / total_cost_basis * 100) if total_cost_basis > 0 else 0
+        
+        return {
+            "positions": calculated_positions,
+            "summary": {
+                "totalValue": total_market_value,
+                "totalCost": total_cost_basis,
+                "totalGain": total_gain,
+                "totalGainPercent": total_gain_percent,
+                "positionCount": len(calculated_positions)
+            }
+        }
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/portfolio/stock-search")
+async def search_stocks_for_portfolio(query: str = "", limit: int = 20):
+    """
+    Search stocks for adding to portfolio
+    
+    Args:
+        query: Search term (symbol or name)
+        limit: Maximum number of results
+    
+    Returns:
+        List of matching stocks with current prices
+    """
+    try:
+        all_stocks = get_cached_stocks()
+        
+        # Filter by query if provided
+        if query:
+            query_lower = query.lower()
+            filtered_stocks = [
+                s for s in all_stocks
+                if query_lower in s["symbol"].lower() or query_lower in s["name"].lower()
+            ]
+        else:
+            filtered_stocks = all_stocks
+        
+        # Limit results
+        results = filtered_stocks[:limit]
+        
+        return {
+            "stocks": results,
+            "count": len(results),
+            "total": len(all_stocks)
+        }
+    
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/market/stocks-all")
+async def get_all_indian_stocks():
+    """
+    Get all 500 Indian stocks with current data
+    
+    Returns:
+        Complete list of 500 Indian stocks with prices, changes, sectors, etc.
+    """
+    try:
+        stocks = get_cached_stocks()
+        sectors = get_cached_sectors()
+        
+        return {
+            "stocks": stocks,
+            "sectors": sectors,
+            "totalStocks": len(stocks),
+            "totalSectors": len(sectors),
+            "lastUpdate": datetime.now().isoformat()
+        }
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
