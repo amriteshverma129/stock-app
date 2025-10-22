@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { formatCurrency, formatPercent, getChangeColor } from "@/lib/utils";
-import { StockCardLoader } from "./LoadingScreen";
+import { LoadingScreen } from "./LoadingScreen";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
