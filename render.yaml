@@ -1,0 +1,31 @@
+services:
+  # Backend API
+  - type: web
+    name: stock-api
+    runtime: python
+    rootDir: backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn main:app --host 0.0.0.0 --port $PORT"
+    dockerfilePath: ""
+    dockerContext: ""
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.9.0
+      - key: DATA_FOLDER
+        value: ./data
+    plan: free
+
+  # Frontend (Optional - you can use Vercel instead)
+  # Uncomment if you want both on Render
+  # - type: web
+  #   name: stock-frontend
+  #   runtime: node
+  #   rootDir: frontend
+  #   buildCommand: "npm install && npm run build"
+  #   startCommand: "npm start"
+  #   envVars:
+  #     - key: NEXT_PUBLIC_API_URL
+  #       value: https://stock-api.onrender.com
+  #     - key: NODE_ENV
+  #       value: production
+  #   plan: free

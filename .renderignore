@@ -1,0 +1,11 @@
+frontend/
+*.md
+.git/
+.github/
+docker-compose.yml
+backend/venv/
+backend/__pycache__/
+backend/models/
+*.pyc
+.DS_Store
+

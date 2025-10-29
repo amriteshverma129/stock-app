@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+env/
+*.egg-info/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+*.log
+npm-debug.log*
+.vercel
+.env*.local
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Old output files (if any remain)
+output_*.png
+prediction_*.png
+# Don't ignore requirements.txt
+!requirements.txt
+
+# Databases
+*.db
+*.sqlite
+
+# Build artifacts
+dist/
+build/

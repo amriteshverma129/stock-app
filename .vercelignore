@@ -1,0 +1,9 @@
+backend/
+data/
+*.md
+.git/
+.github/
+docker-compose.yml
+Dockerfile
+render.yaml
+

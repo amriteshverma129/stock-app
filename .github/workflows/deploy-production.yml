@@ -1,0 +1,75 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  # Backend auto-deploys via Render/Railway GitHub integration
+  # This workflow is for additional checks and notifications
+  
+  test-backend:
+    name: Test Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run basic tests
+        run: |
+          python -c "import fastapi; import uvicorn; print('✓ Dependencies OK')"
+          python -c "from main import app; print('✓ App loads OK')"
+  
+  test-frontend:
+    name: Test Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./frontend
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_API_URL: https://stock-api.onrender.com
+  
+  notify:
+    name: Deployment Notification
+    needs: [test-backend, test-frontend]
+    runs-on: ubuntu-latest
+    if: success()
+    
+    steps:
+      - name: Deployment Success
+        run: |
+          echo "✅ All tests passed!"
+          echo "📦 Backend: Auto-deploying via Render/Railway"
+          echo "🎨 Frontend: Auto-deploying via Vercel"
+          echo "🚀 Deployment in progress..."
+

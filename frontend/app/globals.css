@@ -1,0 +1,197 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 221 83% 53%;
+    
+    --radius: 0.375rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1, "ss01" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    letter-spacing: -0.011em;
+  }
+  
+  .font-mono {
+    font-family: var(--font-mono), "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+    font-feature-settings: "zero" 1, "cv11" 1;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-weight: 600;
+    letter-spacing: -0.025em;
+  }
+}
+
+@layer utilities {
+  /* Enterprise-grade animations */
+  .animate-scroll {
+    animation: scroll 60s linear infinite;
+  }
+  
+  @keyframes scroll {
+    0% {
+      transform: translateX(0);
+    }
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+  
+  .animate-scroll:hover {
+    animation-play-state: paused;
+  }
+  
+  /* Professional transitions */
+  .transition-smooth {
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  /* Financial data tables */
+  .data-row {
+    @apply border-b border-border last:border-0 hover:bg-muted/50 transition-colors;
+  }
+  
+  .data-cell {
+    @apply px-3 py-2 text-sm;
+  }
+  
+  /* Status indicators */
+  .status-live {
+    @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700 border border-emerald-200;
+  }
+  
+  .status-indicator {
+    @apply w-1.5 h-1.5 rounded-full animate-pulse;
+  }
+  
+  /* Enterprise cards */
+  .enterprise-card {
+    @apply bg-card border border-border rounded-lg shadow-sm hover:shadow-md transition-shadow;
+  }
+  
+  .enterprise-card-header {
+    @apply border-b border-border px-4 py-3;
+  }
+  
+  .enterprise-card-content {
+    @apply p-4;
+  }
+  
+  /* Professional metrics */
+  .metric-value {
+    @apply text-2xl font-semibold tracking-tight tabular-nums;
+  }
+  
+  .metric-label {
+    @apply text-xs font-medium text-muted-foreground uppercase tracking-wide;
+  }
+  
+  .metric-change-positive {
+    @apply text-emerald-600 font-medium;
+  }
+  
+  .metric-change-negative {
+    @apply text-red-600 font-medium;
+  }
+  
+  /* Financial badges */
+  .badge-buy {
+    @apply bg-emerald-50 text-emerald-700 border-emerald-200;
+  }
+  
+  .badge-sell {
+    @apply bg-red-50 text-red-700 border-red-200;
+  }
+  
+  .badge-hold {
+    @apply bg-amber-50 text-amber-700 border-amber-200;
+  }
+  
+  /* Professional scrollbar */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 3px;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground));
+  }
+  
+  /* Tabular numbers for financial data */
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+}
+
+/* Selection styles */
+::selection {
+  @apply bg-primary/10 text-foreground;
+}
+
+::-moz-selection {
+  @apply bg-primary/10 text-foreground;
+}
+
+/* Accessibility improvements */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
