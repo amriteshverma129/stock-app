@@ -12,7 +12,7 @@ import {
   AlertTriangle,
   Brain,
 } from "lucide-react";
-const API_URL = "https://stock-app-iscx.onrender.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface Prediction {
   timeframe: string;

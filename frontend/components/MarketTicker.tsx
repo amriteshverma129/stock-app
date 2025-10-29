@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ArrowUpRight, ArrowDownRight, Minus } from "lucide-react";
 
-const API_URL = "https://stock-app-iscx.onrender.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface MarketData {
   symbol: string;

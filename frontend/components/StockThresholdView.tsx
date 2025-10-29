@@ -12,7 +12,7 @@ import {
 import { ThresholdChart } from "@/components/charts/ThresholdChart";
 import { Button } from "@/components/ui/button";
 
-const API_URL = "https://stock-app-iscx.onrender.com";
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 interface ThresholdData {
   date: string;

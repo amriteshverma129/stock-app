@@ -342,7 +342,7 @@ import { useState, useEffect } from "react";
 import axios from "axios";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
-const API_URL = "https://stock-app-iscx.onrender.com";
+const API_URL = "";
 
 export function NewFeature({ symbol }: { symbol: string }) {
   const [data, setData] = useState(null);
